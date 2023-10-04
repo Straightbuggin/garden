@@ -1,12 +1,11 @@
-use clap::{Parser, Subcommand};
-use std::path::PathBuf;
+use clap::{error::ErrorKind, CommandFactory, Parser, Subcommand};
 use directories::UserDirs;
-
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[clap(version)]
 struct Args {
-    #[clap(short = 'p', long ,env)]
+    #[clap(short = 'p', long, env)]
     garden_path: Option<PathBuf>,
 
     #[command(subcommand)]
@@ -25,11 +24,39 @@ enum Commands {
 }
 
 fn get_default_garden_dir() -> Option<PathBuf> {
-UserDirs::new()
-    .map(|dirs| dirs.home_dir().join("garden"))
+    UserDirs::new().map(|dirs| dirs.home_dir().join("garden"))
 }
 
 fn main() {
     let args = Args::parse();
-    dbg!(args);
+
+    let Some(garden_path) =
+        args.garden_path.or_else(get_default_garden_dir)
+        else {
+            let mut cmd = Args::command();
+            cmd.error(
+                ErrorKind::ValueValidation,
+                format!(
+                    "garden directory not provided and home directory unavailable for default garden directory"
+                ),
+            )
+                .exit()
+        };
+    if !garden_path.exists() {
+        let mut cmd = Args::command();
+        cmd.error(
+            ErrorKind::ValueValidation,
+            format!(
+                "garden directory `{}` doesn't exist, or is inaccessible",
+                garden_path.display()
+            ),
+        )
+        .exit()
+    };
+
+    match args.cmd {
+        Commands::Write { title }  => {
+            garden::write(garden_path, title)
+        }
+    }
 }
