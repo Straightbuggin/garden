@@ -27,7 +27,7 @@ fn get_default_garden_dir() -> Option<PathBuf> {
     UserDirs::new().map(|dirs| dirs.home_dir().join("garden"))
 }
 
-fn main() {
+fn main()->Result<(), std::io::Error> {
     let args = Args::parse();
 
     let Some(garden_path) =
